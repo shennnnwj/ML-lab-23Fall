@@ -6,25 +6,28 @@ from global_value import *
 import pandas as pd
 import json
 
+fine_tuning = 0.55 #由于降水的样例偏少，因此对模型做一个修正使之更倾向于给出降水的预测
+
 if __name__ == "__main__":
     df = pd.read_excel(test_data_path)
+    df = day_rainy(df)
     df_data = df.drop(columns=columns_to_drop)
     columns = df_data.columns.tolist()
     columns.remove("RRR")
     """
     数据的列表
     """
-    for index, row in df_data.iterrows():
-        """
-        对降水列进行处理
-        """
-        if(df_data.loc[index,"RRR"]!=df_data.loc[index,"RRR"]):
-            df_data.loc[index,"RRR"] = -1
-            #break                  #如果break，则将后面记录不全的数据舍弃掉
-        elif(df_data.loc[index,"RRR"] == "无降水"):
-            df_data.loc[index,"RRR"] = 0
-        else:
-            df_data.loc[index,"RRR"] = 1
+    # for index, row in df_data.iterrows():
+    #     """
+    #     对降水列进行处理
+    #     """
+    #     if(df_data.loc[index,"RRR"]!=df_data.loc[index,"RRR"]):
+    #         df_data.loc[index,"RRR"] = -1
+    #         #break                  #如果break，则将后面记录不全的数据舍弃掉
+    #     elif(df_data.loc[index,"RRR"] == "无降水"):
+    #         df_data.loc[index,"RRR"] = 0
+    #     else:
+    #         df_data.loc[index,"RRR"] = 1
 
     with open(Chinese_num_map_path, "r") as f:
         Chinese_to_num_map = json.load(f)
@@ -69,7 +72,7 @@ if __name__ == "__main__":
     Unknown = 0
     for index, rows in df_data.iterrows():          #测试准确率
         dis_true = cal_distance(index,df_data,true_center,columns)           #到正样例中心的距离
-        dis_false = cal_distance(index,df_data,false_center,columns)         #到负样例中心的距离
+        dis_false = cal_distance(index,df_data,false_center,columns) + fine_tuning        #到负样例中心的距离
         if df_data.loc[index,"RRR"] == 1:
             if dis_true < dis_false:
                 TP += 1
@@ -83,8 +86,13 @@ if __name__ == "__main__":
         else:
             Unknown += 1
 
-    print(TP,TN,FP,FN,Unknown)
+    print("TP:"+str(TP))
+    print("TN:"+str(TN))
+    print("FP:"+str(FP))
+    print("FN:"+str(FN))
     Precision = TP/(TP+FP)
     Recall = TP/(TP+FN)
+    print("Precision:"+str(Precision))
+    print("Recall:"+str(Recall))
     F1_score = 2*Precision*Recall/(Precision+Recall)
     print("F1_score = " + str(F1_score))

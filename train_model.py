@@ -16,23 +16,24 @@ model = {}
 
 if __name__ == "__main__":
     df = pd.read_excel(train_data_path)
+    df = day_rainy(df)          #处理降水项
     df_data = df.drop(columns=columns_to_drop)
     columns = df_data.columns.tolist()
     columns.remove("RRR")
     """
     数据的列表
     """
-    for index, row in df_data.iterrows():
-        """
-        对降水列进行处理
-        """
-        if(df_data.loc[index,"RRR"]!=df_data.loc[index,"RRR"]):         #数据为nan
-            df_data.loc[index,"RRR"] = -1
-            #break                  #如果break，则将后面记录不全的数据舍弃掉
-        elif(df_data.loc[index,"RRR"] == "无降水"):
-            df_data.loc[index,"RRR"] = 0
-        else:
-            df_data.loc[index,"RRR"] = 1
+    # for index, row in df_data.iterrows():
+    #     """
+    #     对降水列进行处理
+    #     """
+    #     if(df_data.loc[index,"RRR"]!=df_data.loc[index,"RRR"]):         #数据为nan
+    #         df_data.loc[index,"RRR"] = -1
+    #         #break                  #如果break，则将后面记录不全的数据舍弃掉
+    #     elif(df_data.loc[index,"RRR"] == "无降水"):
+    #         df_data.loc[index,"RRR"] = 0
+    #     else:
+    #         df_data.loc[index,"RRR"] = 1
 
     with open(Chinese_num_map_path, "r") as f:
         Chinese_to_num_map = json.load(f)

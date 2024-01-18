@@ -2,24 +2,31 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
+from global_value import *
 import re
+import json
 
 #os.chdir("data")
 
 print("?????")
 df = pd.read_excel('./data/training_dataset.xls')
-
-columns_to_drop = ['Time Stamp', 'DD','ff10','N', 'WW','W2','Cl','Nh','H','Cm','Ch','E','Tg',"E'",'sss']
-
-df = df.drop(columns=columns_to_drop)
-for i in range(0,8000):
-    if(df.loc[i,"RRR"] == "无降水"):
-        df.loc[i,"RRR"] = 0
-    else:
-        df.loc[i,"RRR"] = 1
-
-test = df.iloc[7000:8000]
-df = df.iloc[:7000]
+df = day_rainy(df)          #处理降水项
+df_data = df.drop(columns=columns_to_drop)
+columns = df_data.columns.tolist()
+columns.remove("RRR")
+with open(Chinese_num_map_path, "r") as f:
+    Chinese_to_num_map = json.load(f)
+    """
+    中文到数字的映射表
+    """
+for index, row in df_data.iterrows():       #将中文转化为数字
+    for key_co in Chinese_to_num_map:
+        submap = Chinese_to_num_map[key_co]
+        if(df_data.loc[index,key_co] in submap):
+            df_data.loc[index,key_co] = submap[df_data.loc[index,key_co]]
+        
+# test = df_data.iloc[7000:8000]
+df = df_data.iloc[:7000]
 
 print(df.head())
 print(df.corr())

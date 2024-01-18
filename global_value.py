@@ -43,5 +43,48 @@ def cal_distance(row_idx, table, center, columns):
     ret = 0
     for co in columns:
         ret += (center[co] - table.loc[row_idx, co])**2
+
+    ##权重调整，使相关度高的项目权重更高
+    ret += 2*(center["U"] - table.loc[row_idx,"U"])**2
+    ret += 2*(center["WW"] - table.loc[row_idx,"WW"])**2
+    ret += (center["P"] - table.loc[row_idx,"P"])**2
+    ret += (center["Td"] - table.loc[row_idx,"Td"])**2
     #print(ret)
     return ret
+
+def day_rainy(dataset):
+    """
+    处理RRR列表并将对时刻的预测转化为对天的预测
+    """
+    yesterday = 0
+    begin = 0       #某天开始的位置
+    flag = 0        #记录当天是否有雨
+    for index, row in dataset.iterrows():
+        """
+        对降水列进行处理
+        """
+        if(dataset.loc[index,"RRR"]!=dataset.loc[index,"RRR"]):         #数据为nan
+            dataset.loc[index,"RRR"] = -1
+            #break                  #如果break，则将后面记录不全的数据舍弃掉
+        elif(dataset.loc[index,"RRR"] == "无降水"):
+            dataset.loc[index,"RRR"] = 0
+        else:
+            dataset.loc[index,"RRR"] = 1
+
+    for index, row in dataset.iterrows():
+        today = dataset.loc[index,"Time Stamp"][0:10]
+        if today != yesterday:          #进入下一天
+            if flag == 1:               #当天下雨了，将那天的RRR全部改为1
+                for i in range(begin,index):
+                    dataset.loc[i,"RRR"] = 1
+            flag = 0
+            begin = index
+            yesterday = today
+        if dataset.loc[index,"RRR"] == 1:       #当天是下雨的
+            flag = 1
+    index += 1
+    if flag == 1:               #当天下雨了，将那天的RRR全部改为1
+        for i in range(begin,index):
+            dataset.loc[i,"RRR"] = 1
+    return dataset
+        
