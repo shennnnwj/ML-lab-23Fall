@@ -1,0 +1,211 @@
+\documentclass[twocolumn]{article}
+\usepackage{ctex}
+\usepackage[utf8]{inputenc}
+\usepackage{tikz}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{multicol} 
+\usepackage{enumerate}
+\usepackage{float}
+\usepackage{multirow}
+\usepackage{dblfloatfix} % 用于修复双栏浮动问题
+\usepackage{afterpage} % 用于延迟内容到下一页
+\usepackage{hyperref}
+\usepackage{color}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\usepackage{listings}
+\lstset{
+  aboveskip=3mm,
+  belowskip=3mm,
+  basicstyle=\small \ttfamily,  % 设置代码的大小和字体
+  columns=fixed,  % 保持字符的宽度一致
+  numbers=left,  % 显示行号
+  numberstyle=\tiny\color{gray},,  % 设置行号的大小
+  frame=tb,  % 在顶部和底部添加横线
+  showspaces=false,  % 不显示空格
+  showstringspaces=false,  % 不在字符串中显示空格
+  breaklines = true,
+  xleftmargin = 1em,
+  xrightmargin = 1em,
+  language=python, 
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breakatwhitespace=true,
+  escapeinside=``,
+  tabsize=4,
+  extendedchars=false
+}
+
+\geometry{a4paper, margin=1in}
+
+\title{Raining Forecast via Clustering}
+\author{Runfeng Lin, Wenjie Shen, Jinghan Liu}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Abstract}
+This experiment aims to forecast rain through a set of attributes. The experiment includes Chinese processing, data analysis, model training, and model testing steps. Finally, we obtain an F1-score of 0.85.
+
+\section{Introduction}
+
+In machine learning, analyzing the relationship between Chinese items and precipitation is crucial for applications such as meteorological forecasting. This experiment seeks to establish a mapping table from Chinese to numeric values through data analysis and model training.
+
+\section{Experimental Design and Methods}
+
+\subsection{Chinese Processing}
+
+Specifically, we map each Chinese item to a number according to its corresponding precipitation rate. The purpose of this step is to transform non-numerical Chinese data into numerical data that can be used for subsequent analysis and model training.
+
+\begin{lstlisting}
+  for co in column:
+        Chinese_to_num_map = {}        
+        map_rainy = {}            
+        rain_percent = {}
+        for index, row in df_data.iterrows():
+            if(index>Max):
+                break
+            ##if(df_data.loc[index,"RRR"] == -1):         
+            ##    continue
+            temp = df_data.loc[index,co]
+            if(isinstance(temp,str)):     
+                if not (temp in Chinese_to_num_map):
+                    Chinese_to_num_map[temp] = 0
+                    map_rainy[temp] = 0
+                Chinese_to_num_map[temp] += 1       
+                if(df_data.loc[index,"RRR"] == 1):
+                    map_rainy[temp] += 1
+                elif(df_data.loc[index,"RRR"] == -1):      
+                    map_rainy[temp] += 0.5
+        for key in Chinese_to_num_map:              
+            rain_percent[key] = map_rainy[key] / Chinese_to_num_map[key]
+        co_to_map[co] = rain_percent
+
+    for key in co_to_map:
+        print(co_to_map[key])
+    with open(Chinese_num_map_path, "w") as file:
+        json_str = json.dumps(co_to_map)
+        file.write(json_str)
+\end{lstlisting}
+
+\subsection{Data Analysis}
+
+In this step, we calculate the correlation between each data column and precipitation. We find that the weight in the 2-means clustering should be appropriately increased for data columns with high correlation. This is because these data columns have a closer relationship with precipitation, so they should be given more weight when predicting precipitation.
+
+
+
+\subsection{2-means Model Training}
+
+In this step, we train the centers of two clusters based on the training set data. This is a key step in 2-means clustering analysis. Through this step, we can obtain a model that can distinguish whether it will rain or not.
+
+The following program calculates the distance between a row and a center point.
+\begin{lstlisting}
+    def cal_distance(row_idx, table, center, columns):
+    """
+    计算 table 的第 row_idx 行到某个中心点 center 的距离
+    """
+    ret = 0
+    for co in columns:
+        ret += (center[co] - table.loc[row_idx, co])**2
+
+    ##`权重调整，使相关度高的项目权重更高`
+    ret += 2*(center["U"] - table.loc[row_idx,"U"])**2
+    ret += 2*(center["WW"] - table.loc[row_idx,"WW"])**2
+    ret += (center["P"] - table.loc[row_idx,"P"])**2
+    ret += (center["Td"] - table.loc[row_idx,"Td"])**2
+    #print(ret)
+    return ret
+\end{lstlisting}
+
+The following program uses the cal\_distance program to train the model.
+
+\begin{lstlisting}
+     for _ in range(0,epoches):        #进行训练
+        print("当前训练轮数:" + str(_))
+        true_cnt = 0
+        false_cnt = 0
+        for co in columns:
+            true_next[co] = 0
+            false_next[co] = 0
+        for index, rows in df_data.iterrows():
+            #到正样例中心的距离
+            dis_true = cal_distance(index,
+                            df_data,
+                            true_center,
+                            columns)  
+                                    
+            #到负样例中心的距离
+            dis_false = cal_distance(index,
+                            df_data,
+                            false_center,
+                            columns)         
+            if dis_true < dis_false:      #视为正样例
+                for co in columns:
+                    true_next[co] += df_data.loc[index,co]
+                true_cnt += 1
+            else:
+                for co in columns:
+                    false_next[co] += df_data.loc[index,co]
+                false_cnt += 1
+        for co in columns:
+            true_center[co] = true_next[co] / true_cnt
+            false_center[co] = false_next[co] / false_cnt
+        print(true_cnt,false_cnt)
+        print(true_center)
+        print(false_center)
+
+    print("Done")
+\end{lstlisting}
+
+\subsection{Model Testing}
+
+In this step, we use the test set data to test various performance indicators of the model, including but not limited to precision, recall, and F1 score. The purpose of this step is to verify the predictive ability of the model and its generalization performance on unknown data.
+
+\begin{lstlisting}
+     for index, rows in df_data.iterrows(): 
+        dis_true = cal_distance(index,
+                        df_data,
+                        true_center,
+                        columns)  
+        dis_false = cal_distance(index,
+                        df_data,
+                        false_center,
+                        columns) 
+                        + fine_tuning       
+        if df_data.loc[index,"RRR"] == 1:
+            if dis_true < dis_false:
+                TP += 1
+            else:
+                FN += 1
+        elif df_data.loc[index,"RRR"] == 0:
+            if dis_true < dis_false:
+                FP += 1
+            else:
+                TN += 1
+        else:
+            Unknown += 1
+\end{lstlisting}
+
+\section{Experimental Results}
+
+In this section, we present the results of the experiment, including the generated mapping table from Chinese to numeric values and the model's accuracy.
+
+\section{Discussion}
+
+Discuss the experiment results, analyze the relationship between Chinese items and precipitation, and evaluate the model's performance and training process issues.
+
+\section{Conclusion}
+
+Summarize the main findings and results of the experiment, suggesting possible directions for improvement.
+
+\section{References}
+
+List references, including the dataset used, tools, and relevant literature.
+
+\end{document}
