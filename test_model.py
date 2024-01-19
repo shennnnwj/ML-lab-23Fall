@@ -6,7 +6,7 @@ from global_value import *
 import pandas as pd
 import json
 
-fine_tuning = 0.55 #由于降水的样例偏少，因此对模型做一个修正使之更倾向于给出降水的预测
+fine_tuning = 0.12 #由于降水的样例偏少，因此对模型做一个修正使之更倾向于给出降水的预测
 
 if __name__ == "__main__":
     df = pd.read_excel(test_data_path)
