@@ -86,10 +86,6 @@ if __name__ == "__main__":
         else:
             Unknown += 1
 
-    print("TP:"+str(TP))
-    print("TN:"+str(TN))
-    print("FP:"+str(FP))
-    print("FN:"+str(FN))
     Precision = TP/(TP+FP)
     Recall = TP/(TP+FN)
     print("Precision:"+str(Precision))
